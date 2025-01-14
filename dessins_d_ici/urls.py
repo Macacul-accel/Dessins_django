@@ -5,10 +5,9 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('silk/', include('silk.urls', namespace='silk')),
-    path('api/v1/', include('djoser.urls')),
-    path('api/v1/', include('djoser.urls.authtoken')),
+    path('api/v1/auth/', include('user.urls')),
     path('api/v1/', include('product.urls')),
+    path('silk/', include('silk.urls', namespace='silk')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
