@@ -10,9 +10,9 @@ class CreateUserSerializerTests(TestCase):
 
     def test_user_creation_successful(self):
         data = {
-            'email': 'testuser@example.com',
             'first_name': 'John',
             'last_name': 'Doe',
+            'email': 'testuser@example.com',
             'password': 'Password123!',
             're_password': 'Password123!',
         }
@@ -27,9 +27,9 @@ class CreateUserSerializerTests(TestCase):
 
     def test_user_creation_password_too_short(self):
         data = {
-            'email': 'testuser@example.com',
             'first_name': 'John',
             'last_name': 'Doe',
+            'email': 'testuser@example.com',
             'password': 'short',
             're_password': 'short',
         }
@@ -41,9 +41,9 @@ class CreateUserSerializerTests(TestCase):
 
     def test_user_creation_missing_special_characters(self):
         data = {
-            'email': 'testuser@example.com',
             'first_name': 'John',
             'last_name': 'Doe',
+            'email': 'testuser@example.com',
             'password': 'Password123',
             're_password': 'Password123',
         }
@@ -55,9 +55,9 @@ class CreateUserSerializerTests(TestCase):
 
     def test_user_creation_passwords_do_not_match(self):
         data = {
-            'email': 'testuser@example.com',
             'first_name': 'John',
             'last_name': 'Doe',
+            'email': 'testuser@example.com',
             'password': 'Password123!',
             're_password': 'DifferentPassword123!',
         }
@@ -65,13 +65,13 @@ class CreateUserSerializerTests(TestCase):
         response = self.client.post(self.url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('password', response.data)
+        self.assertIn('non_field_errors', response.data)
 
     def test_user_creation_successful_with_special_characters_in_password(self):
         data = {
-            'email': 'testuser@example.com',
             'first_name': 'Jane',
             'last_name': 'Doe',
+            'email': 'testuser@example.com',
             'password': 'Valid123@',
             're_password': 'Valid123@',
         }

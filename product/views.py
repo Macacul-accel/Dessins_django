@@ -1,139 +1,83 @@
-from django.http import Http404
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
+from rest_framework import generics
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework.decorators import action
 
-from .serializers import ProductSerializer, CategorySerializer
-from .models import Product, Category
+from .serializers import ProductSerializer, CategorySerializer, OrderSerializer
+from .models import Product, Category, Order
+from .filters import OrderFilter
 
-class MyTokenObtainPairView(TokenObtainPairView):
-    def post(self, request, *args, **kwargs):
-        try:
-            response = super().post(request, *args, **kwargs)
-            tokens = response.data
-
-            access_token = tokens['access']
-            refresh_token = tokens['refresh']
-
-            res = Response()
-
-            res.data = {'success': True}
-
-            res.set_cookie(
-                key="access_token",
-                value=access_token,
-                httponly=True,
-                secure=True,
-                samesite='None',
-                path='/',
-                max_age=600
-            )
-
-            res.set_cookie(
-                key="refresh_token",
-                value=refresh_token,
-                httponly=True,
-                secure=True,
-                samesite='None',
-                path='/',
-                max_age=600 * 6 * 24
-            )
-
-            return res
-
-        except KeyError:
-            return Response({'success': False, 'error': 'Token generation failed'}, status=400)
-
-        except Exception:
-            return Response({'success': False, 'error': str(Exception)}, status=500)
-        
-class MyTokenRefreshView(TokenRefreshView):
-    def post(self, request, *args, **kwargs):
-        try:
-            refresh_token = request.COOKIES.get('refresh_token')
-
-            request.data['refresh'] = refresh_token
-
-            response = super().post(request, *args, **kwargs)
-
-            tokens = response.data
-            access_token = tokens['access']
-
-            res = Response()
-
-            res.data = {'refreshed': True}
-
-            res.set_cookie(
-                key="access_token",
-                value=access_token,
-                httponly=True,
-                secure=True,
-                samesite='None',
-                path='/',
-                max_age=600
-            )
-
-            return res
-        
-        except KeyError:
-            return Response({'refreshed': False, 'error': 'Token refresh failed'}, status=400)
-
-        except Exception:
-            return Response({'refreshed': False, 'error': str(Exception)}, status=500)
-
-@api_view(['POST'])
-def logout(request):
-    try:
-        res = Response()
-        res.data = {'success': True}
-        res.delete_cookie('access_token', path='/', samesite='None')
-        res.delete_cookie('refresh_token', path='/', samesite='None')
-        return res
-    except Exception:
-            return Response({'success': False, 'error': str(Exception)}, status=500)
 
 class LatestProductList(APIView):
     def get(self, request, format=None):
-        products = Product.objects.all()[0:4]
+        products = Product.objects.order_by('-date_added')[0:4]
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
 
 class ProductDetail(APIView):
-    def get_object(self, category_slug, product_slug):
-        try:
-            return Product.objects.filter(category__slug=category_slug).get(slug=product_slug)
-        except Product.DoesNotExist:
-            raise Http404
-        
     def get(self, request, category_slug, product_slug, format=None):
-        product = self.get_object(category_slug, product_slug)
+        product = get_object_or_404(
+            Product.objects.select_related('category'),
+            category__slug=category_slug,
+            slug=product_slug
+        )
         serializer = ProductSerializer(product)
         return Response(serializer.data)
     
 class CategoryDetail(APIView):
-    def get_object(self, category_slug):
-        try:
-            return Category.objects.get(slug=category_slug)
-        except Category.DoesNotExist:
-            raise Http404
-        
     def get(self, request, category_slug, format=None):
-        category = self.get_object(category_slug)
+        category = get_object_or_404(
+            Category.objects.prefetch_related('products'),
+            slug=category_slug
+        )
         serializer = CategorySerializer(category)
         return Response(serializer.data)
     
-@api_view(['POST'])
-def search(request):
-    query = request.data.get('query', '')
+class SearchProduct(generics.ListAPIView):
+    serializer_class = ProductSerializer
 
-    if query:
-        products = Product.objects.filter(Q(name__icontains=query) | Q(description__icontains=query))
-        serializer = ProductSerializer(products, many=True)
+    def get_queryset(self):
+        query = self.request.data.get('query', '').strip()
+
+        if not query:
+            return Product.objects.all().order_by('-date_added')
+
+        return Product.objects.filter(
+            Q(name__icontains=query) | Q(description__icontains=query)
+            ).order_by('-date_added')
+    
+    def post(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-    return Response({"products": []})
+
+class OrderViewSet(ModelViewSet):
+    queryset = Order.objects.prefetch_related('items__product')
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+    filterset_class = OrderFilter
+    filter_backends = [DjangoFilterBackend]
+
+    def get_queryset(self):
+        qs = super().get_queryset
+        if not self.request.user.is_staff:
+            qs = qs.filter(user=self.request.user)
+        return qs
+    
+    @action(
+        detail=False,
+        methods=['GET'],
+        url_path='user-orders',
+        permission_classes=[IsAuthenticated]
+    )
+    def user_orders(self, request):
+        orders = self.get_queryset().filter(user=request.user)
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)

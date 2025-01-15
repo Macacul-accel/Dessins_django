@@ -1,8 +1,11 @@
 from io import BytesIO
 from PIL import Image
+import uuid
 
 from django.core.files import File
 from django.db import models
+
+from user.models import MyUser
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
@@ -64,3 +67,35 @@ class Product(models.Model):
         thumbnail = File(thumb_io, name=image.name)
 
         return thumbnail
+
+class Order(models.Model):
+    class StatusChoices(models.TextChoices):
+        PENDING = 'En cours'
+        CONFIRMED = 'Confirmée'
+        CANCELLED = 'Annulée'
+
+    order_id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=10,
+        choices=StatusChoices.choices,
+        default=StatusChoices.PENDING
+    )
+    products = models.ManyToManyField(Product, through='OrderItem', related_name='orders')
+
+    def __str__(self):
+        return self.order_id
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+
+    @property
+    def item_subtotal(self):
+        return self.product.price * self.quantity

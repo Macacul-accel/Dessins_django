@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'user',
     'silk',
     'django_extensions',
+    'django_filter',
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -114,6 +115,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'user.custom_validator.MyPasswordValidator',
+    },
 ]
 
 PASSWORD_HASHERS = [
@@ -155,6 +159,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 5,
 }
 
 SIMPLE_JWT = {
@@ -169,9 +176,6 @@ SIMPLE_JWT = {
 DJOSER = {
     'LOGIN_FIELD': 'email',
     "USER_CREATE_PASSWORD_RETYPE": True,
-    "PASSWORD_RESET_CONFIRM_URL": "password/reset/confirm/{uid}/{token}",
-    "SET_PASSWORD_RETYPE": True,
-    "PASSWORD_RESET_CONFIRM_RETYPE": True,
     'SERIALIZERS': {
         'user_create': 'user.serializers.CreateUserSerializer',
         'user': "user.serializers.CreateUserSerializer",
