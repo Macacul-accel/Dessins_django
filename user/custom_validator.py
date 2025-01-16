@@ -1,5 +1,4 @@
 from django.core.exceptions import ValidationError
-from django.utils.translation import gettext_lazy as _
 import re
 
 class MyPasswordValidator:
@@ -24,6 +23,6 @@ class MyPasswordValidator:
             raise ValidationError(self.error_message_special, code='password_error')
         
     def get_help_text(self):
-        return _("Votre mot de passe doit contenir au minimum {min_length} charactères, dont un chiffre et un caratère spécial.").format(
+        return "Votre mot de passe doit contenir au minimum {min_length} charactères, dont un chiffre et un caratère spécial.".format(
             min_length=self.min_length
             )

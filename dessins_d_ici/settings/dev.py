@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'user',
     'silk',
     'django_extensions',
-    'django_filter',
+    'django_filters',
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -177,6 +177,7 @@ DJOSER = {
     'LOGIN_FIELD': 'email',
     "USER_CREATE_PASSWORD_RETYPE": True,
     'SERIALIZERS': {
+        'user_create_password_retype': 'user.serializers.CreateUserSerializer',
         'user_create': 'user.serializers.CreateUserSerializer',
         'user': "user.serializers.CreateUserSerializer",
         'user_delete': "djoser.serializers.UserDeleteSerializer",      

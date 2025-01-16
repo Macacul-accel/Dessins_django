@@ -65,7 +65,7 @@ class CreateUserSerializerTests(TestCase):
         response = self.client.post(self.url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('non_field_errors', response.data)
+        self.assertIn('password', response.data)
 
     def test_user_creation_successful_with_special_characters_in_password(self):
         data = {

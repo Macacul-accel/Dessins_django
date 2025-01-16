@@ -32,10 +32,12 @@ class CreateUserSerializer(UserCreateSerializer):
         return data
     
     def create(self, validated_data):
-        password = validated_data.pop('password')
-        validated_data.pop('re_password')
-
-        user = super().create(validated_data)
+        user = MyUser(
+            email=validated_data['email'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name']
+        )
+        password = validated_data['password']
         user.set_password(password)
         user.save()
 

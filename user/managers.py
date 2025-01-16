@@ -1,7 +1,6 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.utils.translation import gettext_lazy as _
 
 
 class CustomUserManager(BaseUserManager):
@@ -10,22 +9,22 @@ class CustomUserManager(BaseUserManager):
         try:
             validate_email(email)
         except ValidationError:
-            raise ValueError(_("Votre adresse mail n'est pas valide"))
+            raise ValueError("Votre adresse mail n'est pas valide")
         
     def create_user(self, first_name, last_name, email, password, **extra_fields):
 
         if not first_name:
-            raise ValueError(_("Vous devez renseigner votre prénom"))
+            raise ValueError("Vous devez renseigner votre prénom")
         
         if not last_name:
-            raise ValueError(_("Vous devez renseigner votre nom"))
+            raise ValueError("Vous devez renseigner votre nom")
         
 
         if email:
             email = self.normalize_email(email)
             self.email_validator(email)
         else:
-            raise ValueError(_("Base User: une adresse mail doit être rensignée"))
+            raise ValueError("Base User: une adresse mail doit être rensignée")
         
         
         user = self.model(
@@ -50,19 +49,19 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault("is_active", True)
 
         if extra_fields.get("is_superuser") is not True:
-            raise ValueError(_("Superusers must have is_superuser=True"))
+            raise ValueError("Superusers must have is_superuser=True")
         
         if extra_fields.get("is_staff") is not True:
-            raise ValueError(_("Superusers must have is_staff=True"))
+            raise ValueError("Superusers must have is_staff=True")
         
         if not password:
-            raise ValueError(_("Superusers must have a password"))
+            raise ValueError("Superusers must have a password")
 
         if email:
             email = self.normalize_email(email)
             self.email_validator(email)
         else:
-            raise ValueError(_("Admin User: une adresse mail doit être rensignée"))
+            raise ValueError("Admin User: une adresse mail doit être rensignée")
         
 
         user = self.create_user(first_name, last_name, email, password, **extra_fields)

@@ -86,12 +86,10 @@ class MyTokenRefreshView(TokenRefreshView):
 
 @api_view(['POST'])
 def logout(request):
+    """
+    The front need to send the X-CSRFToken in the headers to logout
+    """
     try:
-        refresh_token = request.COOKIES.get('refresh_token')
-        if refresh_token:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-
         res = Response({'success': True})
         res.delete_cookie('access_token', path='/', samesite='None')
         res.delete_cookie('refresh_token', path='/', samesite='None')
