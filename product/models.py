@@ -85,7 +85,7 @@ class Order(models.Model):
     products = models.ManyToManyField(Product, through='OrderItem', related_name='orders')
 
     def __str__(self):
-        return self.order_id
+        return f"Commande #{self.order_id}"
 
 class OrderItem(models.Model):
     order = models.ForeignKey(
