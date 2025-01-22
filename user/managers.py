@@ -24,7 +24,7 @@ class CustomUserManager(BaseUserManager):
             email = self.normalize_email(email)
             self.email_validator(email)
         else:
-            raise ValueError("Base User: une adresse mail doit être rensignée")
+            raise ValueError("Base User: une adresse mail doit être renseignée")
         
         
         user = self.model(

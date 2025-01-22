@@ -4,7 +4,6 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.middleware.csrf import get_token
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -79,7 +78,7 @@ class MyTokenRefreshView(TokenRefreshView):
             return res
         
         except KeyError:
-            return Response({'refreshed': False, 'error': 'Token refresh failed'}, status=400)
+            return Response({'refreshed': False, 'error': 'Token refresh failed'}, status=401)
 
         except Exception as e:
             return Response({'refreshed': False, 'error': str(e)}, status=500)

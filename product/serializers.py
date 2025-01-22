@@ -38,10 +38,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
         source='product.price',
         read_only=True,
         )
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
     
     class Meta:
         model = OrderItem
         fields = (
+            'product',
             'product_name',
             'product_price',
             'quantity',
@@ -50,7 +52,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     order_id = serializers.UUIDField(read_only=True)
-    items = OrderItemSerializer(many=True, read_only=True)
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    items = OrderItemSerializer(many=True)
     total_price = serializers.SerializerMethodField()
 
     def get_total_price(self, obj):
@@ -67,3 +70,11 @@ class OrderSerializer(serializers.ModelSerializer):
             'items',
             'total_price',
         )
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        order = Order.objects.create(**validated_data)
+
+        for item_data in items_data:
+            OrderItem.objects.create(order=order, **item_data)
+        return order

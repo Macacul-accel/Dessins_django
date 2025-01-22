@@ -50,9 +50,11 @@ INSTALLED_APPS = [
     'django_filters',
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
 ]
 
 MIDDLEWARE = [
@@ -121,11 +123,11 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 PASSWORD_HASHERS = [
-    "django.contrib.auth.hashers.Argon2PasswordHasher",
-    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
-    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
-    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
-    "django.contrib.auth.hashers.ScryptPasswordHasher",
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
 ]
 
 
@@ -166,25 +168,23 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "AUTH_HEADER_TYPES": ("Bearer", "JWT"),
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "SIGNING_KEY": "django-insecure-vg$(&eo=ezp^us9q+66@tzs8(^p8m6^d!r3k79ea8=!=^m!y91", #Not the final key
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'SIGNING_KEY': 'django-insecure-vg$(&eo=ezp^us9q+66@tzs8(^p8m6^d!r3k79ea8=!=^m!y91', #Not the final key
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
-    "USER_CREATE_PASSWORD_RETYPE": True,
+    'USER_CREATE_PASSWORD_RETYPE': True,
     'SERIALIZERS': {
         'user_create_password_retype': 'user.serializers.CreateUserSerializer',
         'user_create': 'user.serializers.CreateUserSerializer',
-        'user': "user.serializers.CreateUserSerializer",
-        'user_delete': "djoser.serializers.UserDeleteSerializer",      
+        'user': 'user.serializers.CreateUserSerializer',
+        'user_delete': 'djoser.serializers.UserDeleteSerializer',      
     },
-    'VIEWS': {
-        'token_create': 'user.views.MyTokenObtainPairView',
-        'token_refresh': 'user.views.MyTokenRefreshView',
-    }
 }
+
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
