@@ -1,5 +1,5 @@
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import uuid
 
 from django.core.files import File
@@ -57,6 +57,9 @@ class Product(models.Model):
                 return ''
             
     def make_thumbnail(self, image, size=(300, 200)):
+        """
+        Generate a thumbnail from the original watermarked image.
+        """
         img = Image.open(image)
         img.convert('RGB')
         img.thumbnail(size)
@@ -67,6 +70,33 @@ class Product(models.Model):
         thumbnail = File(thumb_io, name=image.name)
 
         return thumbnail
+
+    def add_watermark(self, image, watermark_text="@nathalielncle", position=(10, 10), font_size=20):
+        """
+        Add a watermark to the original image before saving.
+        """
+        img = Image.open(image).convert('RGB')
+        watermark = ImageDraw.Draw(img)
+
+        try:
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+
+        watermark.text(position, watermark_text, fill=(255, 255, 255, 128), font=font)
+        
+        watermarked_io = BytesIO()
+        img.save(watermarked_io, 'JPEG', quality=85)
+        return File(watermarked_io, name=image.name)
+
+    def save(self, *args, **kwargs):
+        """
+        Override the save method to add a watermark to the original image.
+        """
+        if self.image:
+            self.image = self.add_watermark(self.image)
+        
+        super().save(*args, **kwargs)
 
 class Order(models.Model):
     class StatusChoices(models.TextChoices):
@@ -83,6 +113,11 @@ class Order(models.Model):
         default=StatusChoices.PENDING
     )
     products = models.ManyToManyField(Product, through='OrderItem', related_name='orders')
+    shipping_details = models.JSONField(null=True, blank=True)
+    payment_token = models.CharField(max_length=100)
+    
+    class Meta:
+        ordering = ('-created_at',)
 
     def __str__(self):
         return f"Commande #{self.order_id}"

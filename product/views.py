@@ -1,6 +1,7 @@
 import stripe
-
 from decouple import config
+
+from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -71,32 +72,95 @@ class OrderViewSet(ModelViewSet):
             qs = qs.filter(user=self.request.user)
         return qs
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['POST'])
     def create_payment(self, request, pk=None):
         order = self.get_object()
         if order.status != Order.StatusChoices.PENDING:
             return Response({'error': "Veuillez nous contacter pour régler le problème"}, status=400)
         
+        data = request.POST
+        shipping_info = {
+            'name': data.get('name'),
+            'address': {
+                'line1': data.get('address'),
+                'postal_code': data.get('postal_code'),
+                'city': data.get('city'),
+                'country': data.get('country')
+            }
+        }
+        order.shipping_details = shipping_info
+        order.save()
+
         serializer = self.get_serializer(order)
         total_price = serializer.data['total_price']
         try:
             intent = stripe.PaymentIntent.create(
                 amount=int(total_price * 100),
-                currency="eur",
+                currency='eur',
+                metadata={'order_id': str(order.order_id)},
+                shipping=shipping_info,
                 automatic_payment_methods={
                     'enabled': True,
                 },
             )
-            return Response({"clientSecret": intent['client_secret']}, status=200)
-        except stripe.error.StripeError as e:
+            return Response({'clientSecret': intent['client_secret']}, status=200)
+        except Exception as e:
             return Response({'error': e}, status=400)
+    
+    @action(detail=False, methods=['GET'])
+    def check_pending_order(self, request):
+        """Check if the user already has an order but has not paid yet"""
+        pending_order = Order.objects.filter(user=request.user, status=Order.StatusChoices.PENDING).first()
+        if not pending_order:
+            return Response({'order_id': None})
+        return Response({'order_id': pending_order.order_id})
+    
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.headers.get('Stripe-Signature')
+    endpoint = config('STRIPE_WEBHOOK_SK')
+    event = None
 
-    @action(detail=True, methods=['post'])
-    def confirm_payement(self, request, pk=None):
-        order = self.get_object()
-        if order.status != Order.StatusChoices.PENDING:
-            return Response({'error': "Veuillez nous contacter pour régler le problème"}, status=400)
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint
+        )
+    except ValueError as e:
+        return Response({'error': e}, status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return Response({'error': e}, status=400)
 
-        order.status = Order.StatusChoices.CONFIRMED
-        order.save()
-        return Response({"success": True}, status=200)
+    if event['type'] == 'payement_intent.succeeded':
+        payment_intent = event['data']['object']
+        order_id = payment_intent['metadata'].get('order_id')
+        if order_id:
+            try:
+                order = Order.objects.get(order_id=order_id)
+                order.status = 'Confirmée'
+                order.payment_id = payment_intent['id']
+                order.save()
+            except Order.DoesNotExist:
+                return Response({'error': 'Commande non trouvée'})
+        else:
+            return Response({'error': 'Commande introuvable'})
+        
+    elif event['type'] == 'payment_intent.payment_failed':
+        payment_intent = event['data']['object']
+        error_message = payment_intent['last_payment_error']['message']
+        return Response({'error': error_message})
+    
+    elif event['type'] == 'charge.refunded':
+        charge = event['data']['object']
+        order_id = charge['metadata'].get('order_id')
+        if order_id:
+            try:
+                order = Order.objects.get(order_id=order_id)
+                order.status = 'Annulée'
+                order.save()
+            except Order.DoesNotExist:
+                return Response({'error': 'Commande non trouvée'})
+
+    else:
+        print(f"event non pris en compte {event['type']}")
+    return Response({'status': 'success'}, status=200)

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -26,8 +27,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS')
-
+ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(', ')
 
 # Application definition
 
@@ -42,13 +42,14 @@ INSTALLED_APPS = [
     'corsheaders',
     'djoser',
     'rest_framework_simplejwt',
+    'django_filters',
     'product',
     'user',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:8080',
-]
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS').split(', ')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -145,3 +146,33 @@ MEDIA_ROOT = BASE_DIR / 'media/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'user.MyUser'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'user.customJWTauth.CookieJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 5,
+}
+
+SIMPLE_JWT = {
+    'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'SIGNING_KEY': config('SECRET_KEY'),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'SERIALIZERS': {
+        'user_create_password_retype': 'user.serializers.CreateUserSerializer',
+        'user_create': 'user.serializers.CreateUserSerializer',
+        'user': 'user.serializers.CreateUserSerializer',
+        'user_delete': 'djoser.serializers.UserDeleteSerializer',      
+    },
+}

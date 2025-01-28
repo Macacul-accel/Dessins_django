@@ -72,9 +72,23 @@ class OrderSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
+        user = validated_data.get('user')
+        existing_order = Order.objects.filter(user=user, status=Order.StatusChoices.PENDING).first()
+
+        if existing_order:
+            return existing_order
+        
         items_data = validated_data.pop('items')
         order = Order.objects.create(**validated_data)
 
         for item_data in items_data:
             OrderItem.objects.create(order=order, **item_data)
         return order
+
+    def update(self, instance, validated_data):
+        instance.items.all().delete()
+
+        items_data = validated_data.pop('items', [])
+        for item_data in items_data:
+            OrderItem.objects.update_or_create(order=instance, **item_data)
+        return super().update(instance, validated_data)
