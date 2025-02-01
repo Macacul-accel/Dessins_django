@@ -1,0 +1,14 @@
+{
+    "builds": [
+        {
+            "src": "dessins_d_ici/wsgi.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "dessins_d_ici/wsgi.py"
+        }
+    ]
+}
