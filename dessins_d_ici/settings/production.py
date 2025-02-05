@@ -85,17 +85,12 @@ WSGI_APPLICATION = 'dessins_d_ici.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+import dj_database_url
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': config('DB_PG_DATABASE'),
-        'USER': config('DB_PG_USER'),
-        'PASSWORD': config('DB_PG_PASSWORD'),
-        'HOST': config('DB_PG_HOST'),
-        'PORT': config('DB_PG_PORT'),
-        'CONN_MAX_AGE': 500,
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL'),
+        conn_max_age=500),
 }
 
 
