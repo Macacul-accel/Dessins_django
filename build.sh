@@ -10,4 +10,5 @@ pip install -r requirements.txt
 python manage.py collectstatic --no-input
 
 # Initialize the database
+python manage.py makemigrations
 python manage.py migrate
