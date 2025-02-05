@@ -3,7 +3,8 @@
 set -o errexit
 
 # Install all the packages from the requirements file
-pip install --upgrade pip && -r requirements.txt
+pip install --upgrade pip
+pip install -r requirements.txt
 
 # Initialize the database
 python manage.py migrate
