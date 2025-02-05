@@ -6,5 +6,8 @@ set -o errexit
 pip install --upgrade pip
 pip install -r requirements.txt
 
+# Convert static asset files (for the admin interface)
+python manage.py collectstatic --no-input
+
 # Initialize the database
 python manage.py migrate
