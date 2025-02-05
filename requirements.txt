@@ -14,8 +14,10 @@ djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 djoser==2.3.1
 gprof2dot==2024.6.6
+gunicorn==23.0.0
 idna==3.10
 oauthlib==3.2.2
+packaging==24.2
 pillow==11.1.0
 psycopg2-binary==2.9.10
 pycodestyle==2.12.1

@@ -89,12 +89,11 @@ WSGI_APPLICATION = 'dessins_d_ici.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'URL': config('POSTGRES_URL'),
-        'NAME': config('PGNAME'),
-        'USER': config('PGUSER'),
-        'PASSWORD': config('POSTGRES_PASSWORD'),
-        'HOST': config('PGHOST'),
-        'PORT': config('PGPORT'),
+        'NAME': config('DB_PG_DATABASE'),
+        'USER': config('DB_PG_USER'),
+        'PASSWORD': config('DB_PG_PASSWORD'),
+        'HOST': config('DB_PG_HOST'),
+        'PORT': config('DB_PG_PORT'),
         'CONN_MAX_AGE': 500,
     }
 }
