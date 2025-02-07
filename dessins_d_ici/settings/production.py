@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'djoser',
     'rest_framework_simplejwt',
     'django_filters',
+    'cloudinary',
     'product',
     'user',
 ]
@@ -141,6 +142,19 @@ STATIC_URL = '/static/'
 if not DEBUG:
     STATIC_ROOT = BASE_DIR / 'staticfiles'
     STATIFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+cloudinary.config(
+    cloud_name=config('CLOUDINARY_CLOUD'),
+    api_key=config('CLOUDINARY_API_KEY'),
+    api_secret=config('CLOUDINARY_SECRET_KEY'),
+    secure=True
+)
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media/'

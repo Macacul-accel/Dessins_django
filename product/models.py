@@ -1,6 +1,9 @@
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 import uuid
+import os
+from cloudinary.models import CloudinaryField
+import cloudinary.uploader
 
 from django.core.files import File
 from django.db import models
@@ -26,8 +29,8 @@ class Product(models.Model):
     slug = models.SlugField()
     description = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=6, decimal_places=2)
-    image = models.ImageField(upload_to='originals/', blank=True, null=True)
-    thumbnail = models.ImageField(upload_to='thumbnails/', blank=True, null=True)
+    image = CloudinaryField(folder='watermarked/', blank=True, null=True)
+    thumbnail = CloudinaryField(folder='thumbnails/', blank=True, null=True)
     date_added = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -41,18 +44,18 @@ class Product(models.Model):
     
     def get_image(self):
         if self.image:
-            return 'https://dessins-api.onrender.com' + self.image.url
+            return self.image.url
         return ''
         
     def get_thumbnail(self):
         if self.thumbnail:
-            return 'https://dessins-api.onrender.com' + self.thumbnail.url
+            return self.thumbnail.url
         else:
             if self.image:
                 self.thumbnail = self.make_thumbnail(self.image)
                 self.save()
 
-                return 'https://dessins-api.onrender.com' + self.thumbnail.url
+                return self.thumbnail.url
             else:
                 return ''
             
@@ -71,31 +74,80 @@ class Product(models.Model):
 
         return thumbnail
 
-    def add_watermark(self, image, watermark_text="@nathalielncle", position=(10, 10), font_size=20):
+    def resize_image(self, image):
         """
-        Add a watermark to the original image before saving.
+        Resize the uploaded image to display constant image
         """
-        img = Image.open(image).convert('RGB')
-        watermark = ImageDraw.Draw(img)
+        img = Image.open(image)
+        img = img.resize((600, 800), Image.ANTIALIAS)
 
+        temp_img = 'temp_resized_img.png'
+        img.save(temp_img, 'PNG')
+
+        return temp_img
+    
+    def add_watermark(self, image):
+        """
+        Add a watermark to the image and upload it to Cloudinary
+        """
+        watermark_text = "@nathalielncle"
+
+        img = Image.open(image).convert('RGBA')
+        width, height = img.size
+
+        # Watermark layer
+        watermark = Image.new('RGBA', img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(watermark)
+
+        #Define the font
         try:
-            font = ImageFont.truetype("arial.ttf", font_size)
-        except:
+            font = ImageFont.truetype('arial.ttf', size=50)
+        except IOError:
+            # Default font if not available
             font = ImageFont.load_default()
 
-        watermark.text(position, watermark_text, fill=(255, 255, 255, 128), font=font)
-        
-        watermarked_io = BytesIO()
-        img.save(watermarked_io, 'JPEG', quality=85)
-        return File(watermarked_io, name=image.name)
+        text_width, text_height = draw.textsize(watermark_text, font)
+
+        # Space between tiles
+        spacing_x = text_width + 50
+        spacing_y = text_height + 50
+
+        # Till watermark_text all over the image
+        for x in range(0, width, spacing_x):
+            for y in range(0, height, spacing_y):
+                # temporary layer for the tiles
+                tile = Image.new('RGBA', img.size, (0, 0, 0, 0))
+                tile_draw = ImageDraw.Draw(tile)
+
+                # Make the tile transparent and pivot
+                tile_draw.text((x, y), watermark_text, font=font, fill=(0, 0, 0, 128))
+                tile = tile.rotate(-30, expand=True, resample=Image.BICUBIC, center=(x, y))
+
+                # Adding the tile to the layer
+                watermark = Image.alpha_composite(watermark, tile)
+
+        # Adding the watermark layer to the original image
+        watermarked_img = Image.alpha_composite(img, watermark)
+
+        # Saving the image temporarily
+        temp_img = "temp_watermarked_img.png"
+        watermarked_img.save(temp_img, 'PNG')
+
+        result = cloudinary.uploader.upload(temp_img, folder='watermarked/')
+        os.remove(temp_img)
+
+        # Return the cloudinary url of the watermarked image
+        return result['secure_url']
 
     def save(self, *args, **kwargs):
         """
-        Override the save method to add a watermark to the original image.
+        Override the save method to add a watermark to the original image after resizing it.
         """
         if self.image:
-            self.image = self.add_watermark(self.image)
-        
+            resized_img = self.resize_image(self.image)
+            self.image = self.add_watermark(resized_img)
+
+            os.remove(resized_img)
         super().save(*args, **kwargs)
 
 class Order(models.Model):
