@@ -4,6 +4,17 @@ from .models import Category, Product, OrderItem, Order
 
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
+    image = serializers.SerializerMethodField()
+    thumbnail = serializers.SerializerMethodField()
+
+    def get_image(self, obj):
+        """
+        If object not null, return serialized url
+        """
+        return obj.image.url if obj.image else None
+    
+    def get_thumbnail(self, obj):
+        return obj.thumbnail.url if obj.thumbnail else None
     
     class Meta:
         model = Product
@@ -14,8 +25,8 @@ class ProductSerializer(serializers.ModelSerializer):
             'get_absolute_url',
             'description',
             'price',
-            'get_image',
-            'get_thumbnail',
+            'image',
+            'thumbnail',
         )
 
 class CategorySerializer(serializers.ModelSerializer):

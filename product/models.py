@@ -1,14 +1,17 @@
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 import uuid
-import os
+import random
 from cloudinary.models import CloudinaryField
 import cloudinary.uploader
 
 from django.core.files import File
 from django.db import models
+from pathlib import Path
 
 from user.models import MyUser
+
+FONT_PATH = Path(__file__).resolve().parent / 'font' / 'open_sans.ttf'
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
@@ -41,113 +44,84 @@ class Product(models.Model):
 
     def get_absolute_url(self):
         return f'/{self.category.slug}/{self.slug}/'
-    
-    def get_image(self):
-        if self.image:
-            return self.image.url
-        return ''
-        
-    def get_thumbnail(self):
-        if self.thumbnail:
-            return self.thumbnail.url
-        else:
-            if self.image:
-                self.thumbnail = self.make_thumbnail(self.image)
-                self.save()
-
-                return self.thumbnail.url
-            else:
-                return ''
             
     def make_thumbnail(self, image, size=(300, 200)):
         """
         Generate a thumbnail from the original watermarked image.
         """
         img = Image.open(image)
-        img.convert('RGB')
-        img.thumbnail(size)
+        img.thumbnail(size, Image.LANCZOS)
 
         thumb_io = BytesIO()
-        img.save(thumb_io, 'JPEG', quality=85)
+        img.save(thumb_io, format='PNG', quality=85)
+        thumb_io.seek(0)
 
-        thumbnail = File(thumb_io, name=image.name)
+        result = cloudinary.uploader.upload(thumb_io, folder='thumbnails/')
+        return result['secure_url']
 
-        return thumbnail
-
-    def resize_image(self, image):
+    def resize_image(self, image, size=(600, 800)):
         """
         Resize the uploaded image to display constant image
         """
         img = Image.open(image)
-        img = img.resize((600, 800), Image.ANTIALIAS)
+        img = img.resize(size, Image.LANCZOS)
 
-        temp_img = 'temp_resized_img.png'
-        img.save(temp_img, 'PNG')
+        img_io = BytesIO()
+        img.save(img_io, format='PNG', quality=85)
+        img_io.seek(0)
 
-        return temp_img
+        return img_io
     
     def add_watermark(self, image):
         """
         Add a watermark to the image and upload it to Cloudinary
         """
-        watermark_text = "@nathalielncle"
-
         img = Image.open(image).convert('RGBA')
+        watermark_text = "@nathalielncle"
+        font = ImageFont.truetype(FONT_PATH, 50)
+
         width, height = img.size
 
-        # Watermark layer
+        # Create a single watermark tile
+        text_bbox = font.getbbox(watermark_text)
+        tile_size = (text_bbox[2] + 20, text_bbox[3] + 20)
+        tile = Image.new("RGBA", tile_size, (0, 0, 0, 0))
+
+        draw = ImageDraw.Draw(tile)
+        draw.text((10, 10), watermark_text, font=font, fill=(51, 51, 51))
+        tile = tile.rotate(-30, expand=True)  # Rotate before tiling
+        
+        # Create watermark layer
         watermark = Image.new('RGBA', img.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(watermark)
+        for x in range(0, width, tile.width + 50):
+            for y in range(0, height, tile.height + 50):
+                watermark.paste(tile, (x, y), tile)
 
-        #Define the font
-        try:
-            font = ImageFont.truetype('arial.ttf', size=50)
-        except IOError:
-            # Default font if not available
-            font = ImageFont.load_default()
-
-        text_width, text_height = draw.textsize(watermark_text, font)
-
-        # Space between tiles
-        spacing_x = text_width + 50
-        spacing_y = text_height + 50
-
-        # Till watermark_text all over the image
-        for x in range(0, width, spacing_x):
-            for y in range(0, height, spacing_y):
-                # temporary layer for the tiles
-                tile = Image.new('RGBA', img.size, (0, 0, 0, 0))
-                tile_draw = ImageDraw.Draw(tile)
-
-                # Make the tile transparent and pivot
-                tile_draw.text((x, y), watermark_text, font=font, fill=(0, 0, 0, 128))
-                tile = tile.rotate(-30, expand=True, resample=Image.BICUBIC, center=(x, y))
-
-                # Adding the tile to the layer
-                watermark = Image.alpha_composite(watermark, tile)
 
         # Adding the watermark layer to the original image
-        watermarked_img = Image.alpha_composite(img, watermark)
+        watermarked_img = Image.alpha_composite(img, watermark).convert('RGB')
 
-        # Saving the image temporarily
-        temp_img = "temp_watermarked_img.png"
+        temp_img = BytesIO()
         watermarked_img.save(temp_img, 'PNG')
+        temp_img.seek(0)
 
-        result = cloudinary.uploader.upload(temp_img, folder='watermarked/')
-        os.remove(temp_img)
-
-        # Return the cloudinary url of the watermarked image
-        return result['secure_url']
-
+        return temp_img
+        
     def save(self, *args, **kwargs):
         """
-        Override the save method to add a watermark to the original image after resizing it.
+        Resize and watermark before uploading to cloudinary
         """
-        if self.image:
+        if self.image and not self.pk:
             resized_img = self.resize_image(self.image)
-            self.image = self.add_watermark(resized_img)
+            watermarked_img = self.add_watermark(resized_img)
 
-            os.remove(resized_img)
+            img_result = cloudinary.uploader.upload(watermarked_img, folder='watermarked/')
+            self.image = img_result['secure_url']
+
+            thumbnail_img = self.make_thumbnail(watermarked_img)
+            thumb_result = cloudinary.uploader.upload(thumbnail_img, folder='thumbnails/')
+            self.thumbnail = thumb_result['secure_url']
+
         super().save(*args, **kwargs)
 
 class Order(models.Model):
