@@ -119,7 +119,7 @@ class OrderViewSet(ModelViewSet):
 @csrf_exempt
 def stripe_webhook(request):
     payload = request.body
-    sig_header = request.headers.get('Stripe-Signature')
+    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
     endpoint = config('STRIPE_WEBHOOK_SK')
     event = None
 
@@ -128,12 +128,14 @@ def stripe_webhook(request):
             payload, sig_header, endpoint
         )
     except ValueError as e:
+        print('Error parsing payload: {}'.format(str(e)))
         return Response({'error': e}, status=400)
     except stripe.error.SignatureVerificationError as e:
+        print('Error verifying webhook signature: {}'.format(str(e)))
         return Response({'error': e}, status=400)
 
     if event['type'] == 'payment_intent.succeeded':
-        payment_intent = event['data']['object']
+        payment_intent = event.data.object
         order_id = payment_intent['metadata'].get('order_id')
         if order_id:
             try:
@@ -149,7 +151,7 @@ def stripe_webhook(request):
             return Response({'error': 'Commande introuvable'})
         
     elif event['type'] == 'payment_intent.payment_failed':
-        payment_intent = event['data']['object']
+        payment_intent = event.data.object
         error_message = payment_intent['last_payment_error']['message']
         print('3')
         return Response({'error': error_message})
