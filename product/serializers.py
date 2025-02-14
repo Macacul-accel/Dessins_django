@@ -65,7 +65,7 @@ class OrderSerializer(serializers.ModelSerializer):
     order_id = serializers.UUIDField(read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     items = OrderItemSerializer(many=True)
-    payment_token = serializers.ReadOnlyField()
+    payment_token = serializers.CharField(read_only=True)
     total_price = serializers.SerializerMethodField()
 
     def get_total_price(self, obj):
@@ -80,6 +80,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'user',
             'status',
             'items',
+            'payment_token',
             'total_price',
         )
 
