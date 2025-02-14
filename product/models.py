@@ -140,7 +140,7 @@ class Order(models.Model):
     )
     products = models.ManyToManyField(Product, through='OrderItem', related_name='orders')
     shipping_details = models.JSONField(null=True, blank=True)
-    payment_token = models.CharField(max_length=100)
+    payment_token = models.CharField(max_length=100, null=True, blank=True)
     
     class Meta:
         ordering = ('-created_at',)
