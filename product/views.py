@@ -1,6 +1,7 @@
 import stripe
 from decouple import config
 
+from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -128,11 +129,11 @@ def stripe_webhook(request):
             payload, sig_header, endpoint
         )
     except ValueError as e:
-        print('Error parsing payload: {}'.format(str(e)))
-        return Response({'error': e}, status=400)
+        print(f'Erreur payload: {e}')
+        return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
-        print('Error verifying webhook signature: {}'.format(str(e)))
-        return Response({'error': e}, status=400)
+        print(f'Erreur lors de la vérification de la signture webhook: {e}')
+        return HttpResponse(status=400)
 
     if event['type'] == 'payment_intent.succeeded':
         payment_intent = event.data.object
@@ -144,19 +145,15 @@ def stripe_webhook(request):
                 order.status = 'Confirmée'
                 order.payment_token = payment_intent['id']
                 order.save()
-                print('save = siccess')
             except Order.DoesNotExist as e:
-                print('1', e)
-                return Response({'error': 'Commande non trouvée'}, status=400)
-        else:
-            print('2')
-            return Response({'error': 'Commande introuvable'}, status=400)
+                print('Commande introuvable')
+                return HttpResponse(status=400)
         
     elif event['type'] == 'payment_intent.payment_failed':
         payment_intent = event.data.object
         error_message = payment_intent['last_payment_error']['message']
-        print('3')
-        return Response({'error': error_message})
+        print(f'Erreur lors du paiement: {error_message}')
+        return HttpResponse(status=400)
     
     elif event['type'] == 'charge.refunded':
         charge = event.data.object
@@ -168,10 +165,10 @@ def stripe_webhook(request):
                 order.status = 'Annulée'
                 order.save()
             except Order.DoesNotExist as e:
-                print("4", e)
-                return Response({'error': 'Commande non trouvée'})
+                print('Commande introuvable')
+                return HttpResponse(status=400)
 
     else:
         print(f"event non pris en compte {event['type']}")
-    print('c bueno')
-    return Response({'status': 'success'}, status=200)
+    print('Transaction réussie ! :)')
+    return HttpResponse(Status=200)
