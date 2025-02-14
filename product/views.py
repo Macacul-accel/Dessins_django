@@ -136,19 +136,20 @@ def stripe_webhook(request):
 
     if event['type'] == 'payment_intent.succeeded':
         payment_intent = event.data.object
-        order_id = payment_intent['metadata'].get('order_id')
+        metadata = payment_intent.get('metadata', {})
+        order_id = metadata['order_id']
         if order_id:
             try:
                 order = Order.objects.get(order_id=order_id)
                 order.status = 'Confirmée'
                 order.payment_token = payment_intent.get('id')
                 order.save()
-            except Order.DoesNotExist:
-                print('1')
-                return Response({'error': 'Commande non trouvée'})
+            except Order.DoesNotExist as e:
+                print('1', e)
+                return Response({'error': 'Commande non trouvée'}, status=400)
         else:
             print('2')
-            return Response({'error': 'Commande introuvable'})
+            return Response({'error': 'Commande introuvable'}, status=400)
         
     elif event['type'] == 'payment_intent.payment_failed':
         payment_intent = event.data.object
@@ -157,15 +158,16 @@ def stripe_webhook(request):
         return Response({'error': error_message})
     
     elif event['type'] == 'charge.refunded':
-        charge = event['data']['object']
-        order_id = charge['metadata'].get('order_id')
+        charge = event.data.object
+        metadata = charge.get('metadata', {})
+        order_id = metadata['order_id']
         if order_id:
             try:
                 order = Order.objects.get(order_id=order_id)
                 order.status = 'Annulée'
                 order.save()
-            except Order.DoesNotExist:
-                print("4")
+            except Order.DoesNotExist as e:
+                print("4", e)
                 return Response({'error': 'Commande non trouvée'})
 
     else:
