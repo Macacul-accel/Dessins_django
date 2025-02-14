@@ -135,6 +135,8 @@ def stripe_webhook(request):
         return Response({'error': e}, status=400)
 
     if event['type'] == 'payment_intent.succeeded':
+        print(event.data.object)
+        print("2")
         payment_intent = event.data.object
         metadata = payment_intent.get('metadata', {})
         order_id = metadata['order_id']
