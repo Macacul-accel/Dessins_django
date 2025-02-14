@@ -135,16 +135,17 @@ def stripe_webhook(request):
         return Response({'error': e}, status=400)
 
     if event['type'] == 'payment_intent.succeeded':
-        print(event.data.object)
-        print("2")
         payment_intent = event.data.object
         metadata = payment_intent.get('metadata', {})
+        print(metadata)
         order_id = metadata['order_id']
+        print(order_id)
         if order_id:
             try:
                 order = Order.objects.get(order_id=order_id)
+                print(order)
                 order.status = 'Confirmée'
-                order.payment_token = payment_intent.get('id')
+                order.payment_token = payment_intent['id']
                 order.save()
             except Order.DoesNotExist as e:
                 print('1', e)
@@ -174,4 +175,5 @@ def stripe_webhook(request):
 
     else:
         print(f"event non pris en compte {event['type']}")
+        
     return Response({'status': 'success'}, status=200)
