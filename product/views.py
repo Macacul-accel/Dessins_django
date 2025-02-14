@@ -171,4 +171,4 @@ def stripe_webhook(request):
     else:
         print(f"event non pris en compte {event['type']}")
     print('Transaction réussie ! :)')
-    return HttpResponse(Status=200)
+    return HttpResponse(status=200)
