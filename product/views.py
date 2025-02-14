@@ -138,7 +138,7 @@ def stripe_webhook(request):
             try:
                 order = Order.objects.get(order_id=order_id)
                 order.status = 'Confirmée'
-                order.payment_id = payment_intent['id']
+                order.payment_token = payment_intent['id']
                 order.save()
             except Order.DoesNotExist:
                 return Response({'error': 'Commande non trouvée'})
