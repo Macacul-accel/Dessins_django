@@ -131,7 +131,7 @@ def stripe_webhook(request):
     except stripe.error.SignatureVerificationError as e:
         return Response({'error': e}, status=400)
 
-    if event['type'] == 'payement_intent.succeeded':
+    if event['type'] == 'payment_intent.succeeded':
         payment_intent = event['data']['object']
         order_id = payment_intent['metadata'].get('order_id')
         if order_id:
