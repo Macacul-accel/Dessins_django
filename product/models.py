@@ -130,7 +130,7 @@ class Order(models.Model):
         CONFIRMED = 'Confirmée'
         CANCELLED = 'Annulée'
 
-    order_id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    order_id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True)
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(

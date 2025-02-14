@@ -81,6 +81,7 @@ class OrderViewSet(ModelViewSet):
         data = request.POST
         shipping_info = {
             'name': data.get('name'),
+            'phone': data.get('phone'),
             'address': {
                 'line1': data.get('address'),
                 'postal_code': data.get('postal_code'),
@@ -103,7 +104,7 @@ class OrderViewSet(ModelViewSet):
                     'enabled': True,
                 },
             )
-            return Response({'clientSecret': intent['client_secret']}, status=200)
+            return Response({'client_secret': intent['client_secret']}, status=200)
         except Exception as e:
             return Response({'error': e}, status=400)
     
@@ -138,16 +139,19 @@ def stripe_webhook(request):
             try:
                 order = Order.objects.get(order_id=order_id)
                 order.status = 'Confirmée'
-                order.payment_token = payment_intent['id']
+                order.payment_token = payment_intent.get('id')
                 order.save()
             except Order.DoesNotExist:
+                print('1')
                 return Response({'error': 'Commande non trouvée'})
         else:
+            print('2')
             return Response({'error': 'Commande introuvable'})
         
     elif event['type'] == 'payment_intent.payment_failed':
         payment_intent = event['data']['object']
         error_message = payment_intent['last_payment_error']['message']
+        print('3')
         return Response({'error': error_message})
     
     elif event['type'] == 'charge.refunded':
@@ -159,6 +163,7 @@ def stripe_webhook(request):
                 order.status = 'Annulée'
                 order.save()
             except Order.DoesNotExist:
+                print("4")
                 return Response({'error': 'Commande non trouvée'})
 
     else:
