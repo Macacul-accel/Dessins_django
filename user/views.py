@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from rest_framework_simplejwt import RefreshToken
 from django.middleware.csrf import get_token
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -95,3 +96,26 @@ def logout(request):
         return res
     except Exception as e:
             return Response({'success': False, 'error': str(e)}, status=500)
+    
+@api_view(['GET'])
+def restore_cookies(request):
+    """
+    Restore the cookies, so the user can stay Logged in after Stripe redirect
+    """
+    if request.user.is_authenticated:
+        refresh = RefreshToken.for_user(request.user)
+        res = Response({'cookies_restaured': True})
+
+        res.set_cookie(
+            key="access_token",
+            value=refresh.access_token,
+            httponly=True,
+            secure=True,
+            samesite='None',
+            path='/',
+            max_age=600
+        )
+
+        return res
+    
+    return Response({'cookies_restaures': False, 'error': 'Not authenticated'}, status=401)
